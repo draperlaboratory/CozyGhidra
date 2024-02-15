@@ -1,11 +1,6 @@
 package angryghidra;
 
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
@@ -43,6 +38,13 @@ import docking.widgets.textfield.IntegerTextField;
 import ghidra.program.model.address.Address;
 import ghidra.program.model.listing.Program;
 import resources.ResourceManager;
+
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.web.WebView;
+import javafx.stage.Stage;
+import javafx.embed.swing.JFXPanel;
+import javafx.application.Platform;
 
 public class AngryGhidraProvider extends ComponentProvider {
     public final String htmlString = "<html>Registers<br/>Hint: to create and store symbolic vector enter \"sv{length}\", for example \"sv16\"</html>";
@@ -157,6 +159,25 @@ public class AngryGhidraProvider extends ComponentProvider {
         if (!isWindows) {
             tmpDir += "/";
         }
+    }
+
+    // Replace buildPanel with this method to see an example of the use of webview
+    private void buildPanelWebview() {
+        mainPanel = new JPanel();
+        mainPanel.setLayout(new GridLayout(0, 1));
+        setVisible(true);
+
+        final JFXPanel fxPanel = new JFXPanel();
+        mainPanel.add(fxPanel);
+
+        Platform.runLater(new Runnable() {
+            @Override
+            public void run() {
+                WebView view = new WebView();
+                view.getEngine().load("http://localhost:8080/?pre=/pre&post=/post");
+                fxPanel.setScene(new Scene(view));
+            }
+        });
     }
 
     private void buildPanel() {

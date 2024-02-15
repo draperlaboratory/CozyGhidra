@@ -1,3 +1,12 @@
+plugins {
+    id 'base'
+    id 'org.openjfx.javafxplugin' version '0.1.0'
+}
+
+repositories {
+    mavenCentral()
+}
+
 // Builds a Ghidra Extension for a given Ghidra installation.
 //
 // An absolute path to the Ghidra installation directory must be supplied either by setting the 
@@ -32,10 +41,15 @@ else {
 }
 //----------------------END "DO NOT MODIFY" SECTION-------------------------------
 
-apply plugin: 'base'
+//apply plugin: 'base'
 
 repositories {
     mavenCentral()
+}
+
+javafx {
+    version = "17.0.1" // Specify your desired JavaFX version
+    modules = [ 'javafx.swing', 'javafx.web' ] // Add the JavaFX modules you need
 }
 
 dependencies {
