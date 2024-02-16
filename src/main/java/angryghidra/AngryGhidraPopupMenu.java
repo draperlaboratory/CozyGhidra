@@ -22,17 +22,19 @@ import ghidra.app.context.ListingContextAction;
 import ghidra.framework.plugintool.PluginTool;
 import ghidra.program.model.address.Address;
 import ghidra.program.model.address.AddressIterator;
+import ghidra.program.model.listing.Program;
 import ghidra.program.model.mem.MemoryAccessException;
 
 
 public class AngryGhidraPopupMenu extends ListingContextAction {
-    private final String menuName = "AngryGhidraPlugin";
+    private final String menuName = "CozyGhidraPlugin";
     private final String groupName = "SymEx";
     private PluginTool tool;
     private LocalColorizingService mColorService;
     private UserAddressStorage mAddressStorage;
     private AngryGhidraProvider provider;
-    private JTextField findAddressField;
+    private JTextField callFunA;
+    private JTextField callFunB;
     private JTextField blankStateAddressField;
     private JTextArea textArea;
     private JCheckBox blankStateCB;
@@ -59,27 +61,39 @@ public class AngryGhidraPopupMenu extends ListingContextAction {
             menuName
         }, groupName);
 
-        ListingContextAction setDstAddress = new ListingContextAction("Set destination address", getName()) {
+        ListingContextAction setDstAddress = new ListingContextAction("Set call fun address", getName()) {
             @Override
             protected void actionPerformed(ListingActionContext context) {
-                Address dstAddress = mAddressStorage.getDestinationAddress();
-                if (dstAddress != null) {
-                    mColorService.resetColor(dstAddress);
-                }
                 Address thisAddress = context.getLocation().getAddress();
-                mAddressStorage.setDestinationAddress(thisAddress);
-                mColorService.setColor(thisAddress, Color.GREEN);
-                findAddressField.setText("0x" + thisAddress.toString());
+
+                Program focus = provider.getFocusedProgram();
+                if (focus == provider.programA()) {
+                    Address oldAddr = mAddressStorage.getCallFunAddrA();
+                    if (oldAddr != null) {
+                        mColorService.resetColor(focus, oldAddr);
+                    }
+                    mAddressStorage.setCallFunAddressA(thisAddress);
+                    mColorService.setColor(focus, thisAddress, Color.GREEN);
+                    callFunA.setText("0x" + thisAddress.toString());
+                } else if (focus == provider.programB()) {
+                    Address oldAddr = mAddressStorage.getCallFunAddrB();
+                    if (oldAddr != null) {
+                        mColorService.resetColor(focus, oldAddr);
+                    }
+                    mAddressStorage.setCallFunAddressB(thisAddress);
+                    mColorService.setColor(focus, thisAddress, Color.GREEN);
+                    callFunB.setText("0x" + thisAddress.toString());
+                }
             }
         };
         setDstAddress.setKeyBindingData(new KeyBindingData(KeyEvent.VK_Z, 0));
         setDstAddress.setPopupMenuData(new MenuData(new String[] {
             menuName,
-            "Set",
-            "Address to Find"
+            "Set call function"
         }, null, groupName));
         tool.addAction(setDstAddress);
 
+        /*
         ListingContextAction setBlankStateAddr = new ListingContextAction("Set blank state address", getName()) {
             @Override
             protected void actionPerformed(ListingActionContext context) {
@@ -135,8 +149,8 @@ public class AngryGhidraPopupMenu extends ListingContextAction {
                     Address address = context.getLocation().getAddress();
                     if (address.equals(dstAddress)){
                         mColorService.resetColor(dstAddress);
-                        mAddressStorage.setDestinationAddress(null);
-                        findAddressField.setText("");
+                        mAddressStorage.setCallFunAddress(null);
+                        callFunA.setText("");
                     }
                 }
             }
@@ -204,6 +218,7 @@ public class AngryGhidraPopupMenu extends ListingContextAction {
             "Avoid Address"
         }, null, groupName));
         tool.addAction(resetAvoidAddr);
+         */
 
         ListingContextAction applyPatchedBytes = new ListingContextAction("Apply patched bytes", getName()) {
             @Override
@@ -295,10 +310,9 @@ public class AngryGhidraPopupMenu extends ListingContextAction {
     }
 
     private void setupComponents() {
-        findAddressField = provider.getFindAddressTF();
-        blankStateAddressField = provider.getBSAddressTF();
+        callFunA = provider.getCallFunA();
+        callFunB = provider.getCallFunB();
         textArea = provider.getTextArea();
-        blankStateCB = provider.getCBBlankState();
         avoidAddrsCB = provider.getCBAvoidAddresses();
         writeMemoryPanel = provider.getWriteMemoryPanel();
         storeAddressTF = provider.getStoreAddressTF();

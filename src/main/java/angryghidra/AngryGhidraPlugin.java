@@ -39,8 +39,18 @@ public class AngryGhidraPlugin extends ProgramPlugin {
         provideColorService();
     }
 
+    @Override
+    protected void programOpened(Program program) {
+        provider.programOpened(program);
+    }
+
+    @Override
+    protected void programClosed(Program program) {
+        provider.programClosed(program);
+    }
+
     public void provideColorService() {
-        colorService = new LocalColorizingService(mTool, mProgram);
+        colorService = new LocalColorizingService(mTool);
         popup.setColorService(colorService);
         provider.setColorService(colorService);
     }

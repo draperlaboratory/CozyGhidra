@@ -8,22 +8,29 @@ import ghidra.app.plugin.core.colorizer.ColorizingService;
 
 public class LocalColorizingService {
     private ColorizingService mCService;
-    private Program mProgram;
 
-    public LocalColorizingService(PluginTool tool, Program program) {
+    public LocalColorizingService(PluginTool tool) {
         mCService = tool.getService(ColorizingService.class);
-        mProgram = program;
     }
 
-    public void resetColor(Address address) {
-        int TransactionID = mProgram.startTransaction("resetColor");
+    public void resetColor(Program program, Address address) {
+        int TransactionID = program.startTransaction("resetColor");
         mCService.clearBackgroundColor(address, address);
-        mProgram.endTransaction(TransactionID, true);
+        program.endTransaction(TransactionID, true);
+    }
+
+    public void setColor(Program program, Address address, Color color) {
+        int TransactionID = program.startTransaction("setColor");
+        mCService.setBackgroundColor(address, address, color);
+        program.endTransaction(TransactionID, true);
     }
 
     public void setColor(Address address, Color color) {
-        int TransactionID = mProgram.startTransaction("setColor");
-        mCService.setBackgroundColor(address, address, color);
-        mProgram.endTransaction(TransactionID, true);
+        // TODO: Remove this function
+        throw new RuntimeException("Reached old setColor");
+    }
+
+    public void resetColor(Address address) {
+        // TODO: Remove this function
     }
 }

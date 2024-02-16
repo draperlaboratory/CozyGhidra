@@ -5,19 +5,27 @@ import java.util.List;
 import ghidra.program.model.address.Address;
 
 public class UserAddressStorage {
-    private Address currentDestAddr;
+    private Address currentCallFunAddrA;
+    private Address currentCallFunAddrB;
     private Address currentBlankStateAddr;
     private List <Address> currentAvoidAddresses;
 
     public UserAddressStorage() {
-        currentDestAddr = null;
+        currentCallFunAddrA = null;
+        currentCallFunAddrB = null;
         currentBlankStateAddr = null;
         currentAvoidAddresses = new ArrayList <Address>();
     }
 
-    public Address getDestinationAddress() {
-        return currentDestAddr;
+    public Address getCallFunAddrA() {
+        return currentCallFunAddrA;
     }
+
+    public Address getCallFunAddrB() {
+        return currentCallFunAddrB;
+    }
+
+    public Address getCurrentCallFunAddrB() { return currentCallFunAddrB; }
 
     public Address getBlankStateAddress() {
         return currentBlankStateAddr;
@@ -31,8 +39,12 @@ public class UserAddressStorage {
         return currentAvoidAddresses.get(index);
     }
 
-    public void setDestinationAddress(Address address) {
-        currentDestAddr = address;
+    public void setCallFunAddressA(Address address) {
+        currentCallFunAddrA = address;
+    }
+
+    public void setCallFunAddressB(Address address) {
+        currentCallFunAddrB = address;
     }
 
     public void setBlankStateAddress(Address address) {

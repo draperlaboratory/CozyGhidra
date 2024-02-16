@@ -214,6 +214,10 @@ public class AngrProcessing {
     }
 
     private boolean shouldAvoidColor(Address address){
+        // TODO: Remove this method
+        return false;
+
+        /*
         Address blankStateAddress = mAddressStorage.getBlankStateAddress();
         Address dstAddress = mAddressStorage.getDestinationAddress();
         boolean isBlankStateNotEmpty = blankStateAddress != null;
@@ -224,7 +228,7 @@ public class AngrProcessing {
 
         boolean isAddrToFind = isAddrToFindNotEmpty &&
                 address.equals(dstAddress);
-        return isBlankStateAddr || isAddrToFind;
+        return isBlankStateAddr || isAddrToFind;*/
     }
 
     public void clearTraceList(boolean fullReset){

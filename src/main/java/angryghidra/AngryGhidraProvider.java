@@ -9,26 +9,12 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.FileWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
+import java.util.*;
 import java.util.List;
 import java.util.Map.Entry;
-import javax.swing.BorderFactory;
-import javax.swing.GroupLayout;
+import javax.swing.*;
 import javax.swing.GroupLayout.Alignment;
-import javax.swing.ImageIcon;
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
 import javax.swing.LayoutStyle.ComponentPlacement;
-import javax.swing.ScrollPaneConstants;
-import javax.swing.SwingConstants;
 import javax.swing.border.LineBorder;
 import javax.swing.border.TitledBorder;
 import org.json.JSONArray;
@@ -39,10 +25,8 @@ import ghidra.program.model.address.Address;
 import ghidra.program.model.listing.Program;
 import resources.ResourceManager;
 
-import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.web.WebView;
-import javafx.stage.Stage;
 import javafx.embed.swing.JFXPanel;
 import javafx.application.Platform;
 
@@ -57,7 +41,8 @@ public class AngryGhidraProvider extends ComponentProvider {
     private int guiMemNextId;
     private int guiStoreNextId;
     private String tmpDir;
-    private Program thisProgram;
+    private Program focusedProgram;
+    private HashSet<Program> availablePrograms = new HashSet<>();
     private LocalColorizingService mColorService;
     private HookHandler hookHandler;
     private AngrProcessing angrProcessing;
@@ -74,8 +59,10 @@ public class AngryGhidraProvider extends ComponentProvider {
     private JPanel regPanel;
     private JScrollPane scrollSolutionTextArea;
     private JScrollPane scrollAvoidAddrsArea;
-    private JTextField blankStateTF;
-    private JTextField dstAddressTF;
+    private JComboBox<String> projectACombo;
+    private JComboBox<String> projectBCombo;
+    private JTextField callFunTFA;
+    private JTextField callFunTFB;
     private JTextField valueTF;
     private JTextField registerTF;
     private IntegerTextField firstArgTF;
@@ -83,7 +70,6 @@ public class AngryGhidraProvider extends ComponentProvider {
     private IntegerTextField vectorLenTF;
     private IntegerTextField memStoreAddrTF;
     private IntegerTextField memStoreValueTF;
-    private JCheckBox chckbxBlankState;
     private JCheckBox chckbxAvoidAddresses;
     private JCheckBox chckbxAutoLoadLibs;
     private JCheckBox chckbxArg;
@@ -128,7 +114,7 @@ public class AngryGhidraProvider extends ComponentProvider {
 
     public void setColorService(LocalColorizingService colorService) {
         mColorService = colorService;
-        angrProcessing = new AngrProcessing(addressStorage, mColorService, this, thisProgram.getAddressFactory());
+        angrProcessing = new AngrProcessing(addressStorage, mColorService, this, focusedProgram.getAddressFactory());
     }
 
     private void initFields() {
@@ -384,97 +370,44 @@ public class AngryGhidraProvider extends ComponentProvider {
         });
         chckbxAutoLoadLibs = new JCheckBox("Auto load libs");
         chckbxAutoLoadLibs.setFont(sansSerif12);
-        blankStateTF = new JTextField();
-        blankStateTF.setVisible(false);
-        blankStateTF.addKeyListener(new KeyAdapter() {
-            public void keyReleased(KeyEvent e) {
-                Address blankStateAddress = addressStorage.getBlankStateAddress();
-                if (blankStateAddress != null) {
-                    mColorService.resetColor(blankStateAddress);
-                    addressStorage.setBlankStateAddress(null);
-                }
-            }
-        });
-        chckbxBlankState = new JCheckBox("Blank state");
-        chckbxBlankState.setFont(sansSerif12);
-        chckbxBlankState.addItemListener(
-            new ItemListener() {
-                public void itemStateChanged(ItemEvent e) {
-                    if (chckbxBlankState.isSelected()) {
-                        blankStateTF.setVisible(true);
-                    } else {
-                        blankStateTF.setVisible(false);
-                    }
-                    mainOptionsPanel.revalidate();
-                }
-            }
-        );
 
-        JLabel lbFind = new JLabel("Find address");
-        lbFind.setForeground(new Color(60, 179, 113));
-        lbFind.setFont(sansSerif12);
+        JLabel projectALabel = new JLabel("Program A");
+        JLabel projectBLabel = new JLabel("Program B");
+        String[] defaultComboStrsA = { "" };
+        String[] defaultComboStrsB = { "" };
+        projectACombo = new JComboBox<String>(defaultComboStrsA);
+        projectBCombo = new JComboBox<String>(defaultComboStrsB);
+        projectALabel.setFont(sansSerif12);
+        projectBLabel.setFont(sansSerif12);
 
-        dstAddressTF = new JTextField();
-        dstAddressTF.setMinimumSize(new Dimension(100, 20));
-        dstAddressTF.addKeyListener(new KeyAdapter() {
+        JLabel lbCallFunA = new JLabel("Call function A");
+        lbCallFunA.setFont(sansSerif12);
+        JLabel lbCallFunB = new JLabel("Call function B");
+        lbCallFunB.setFont(sansSerif12);
+
+        callFunTFA = new JTextField();
+        callFunTFA.setMinimumSize(new Dimension(100, 20));
+        callFunTFA.addKeyListener(new KeyAdapter() {
             public void keyReleased(KeyEvent e) {
-                Address dstAddress = addressStorage.getDestinationAddress();
+                Address dstAddress = addressStorage.getCallFunAddrA();
                 if (dstAddress != null) {
-                    mColorService.resetColor(dstAddress);
-                    addressStorage.setDestinationAddress(null);
+                    mColorService.resetColor(programA(), dstAddress);
+                    addressStorage.setCallFunAddressA(null);
                 }
             }
         });
 
-        chckbxAvoidAddresses = new JCheckBox("Аvoid addresses");
-        chckbxAvoidAddresses.setForeground(new Color(255, 0, 0));
-        chckbxAvoidAddresses.setToolTipText("");
-        chckbxAvoidAddresses.setFont(sansSerif12);
-
-        avoidTextArea = new JTextArea();
-        avoidTextArea.setMinimumSize(new Dimension(40, 40));
-        avoidTextArea.setToolTipText("Enter the hex values separated by comma.");
-        avoidTextArea.setFont(dstAddressTF.getFont());
-        avoidTextArea.addKeyListener(new KeyAdapter() {
+        callFunTFB = new JTextField();
+        callFunTFB.setMinimumSize(new Dimension(100, 20));
+        callFunTFB.addKeyListener(new KeyAdapter() {
             public void keyReleased(KeyEvent e) {
-                List<Address> userAvoidAddresses = new ArrayList<Address>(addressStorage.getAvoidAddresses());
-                if (!userAvoidAddresses.isEmpty()) {
-                    try {
-                        List <String> avoidAddresses = Arrays.asList(avoidTextArea.getText().split(","));
-                        // Sanitize the list
-                        String separator = System.getProperty("line.separator");
-                        for (int i = 0; i < avoidAddresses.size(); i++) {
-                            avoidAddresses.set(i, avoidAddresses.get(i).replace(separator, ""));
-                        }
-                        for (int i = 0; i < userAvoidAddresses.size(); i++) {
-                            Address address = userAvoidAddresses.get(i);
-                            String strAddress = "0x" + address.toString();
-                            if (!avoidAddresses.contains(strAddress)) {
-                                mColorService.resetColor(address);
-                                addressStorage.removeAvoidAddress(address);
-                            }
-                        }
-                    } catch (Exception ex) {}
+                Address dstAddress = addressStorage.getCallFunAddrB();
+                if (dstAddress != null) {
+                    mColorService.resetColor(programB(), dstAddress);
+                    addressStorage.setCallFunAddressB(null);
                 }
             }
         });
-
-        scrollAvoidAddrsArea = new JScrollPane(avoidTextArea);
-        scrollAvoidAddrsArea.setMinimumSize(new Dimension(50, 50));
-        scrollAvoidAddrsArea.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
-        scrollAvoidAddrsArea.setVisible(false);
-        chckbxAvoidAddresses.addItemListener(
-            new ItemListener() {
-                public void itemStateChanged(ItemEvent e) {
-                    if (chckbxAvoidAddresses.isSelected()) {
-                        scrollAvoidAddrsArea.setVisible(true);
-                    } else {
-                        scrollAvoidAddrsArea.setVisible(false);
-                    }
-                    mainOptionsPanel.revalidate();
-                }
-            }
-        );
 
         // Unfortunately, it was found that GUI gaps look different on different operating systems
         int blankStateTFGap = 10;
@@ -483,7 +416,7 @@ public class AngryGhidraProvider extends ComponentProvider {
         int scrollAvoidAddrsAreaGap = 11;
         int avoidAreaGap = 11;
         int bufferGap = 8;
-        int horizontalFindAddressGap = 22;
+        int horizontalCallFunGap = 22;
         if (isWindows) {
             blankStateTFGap = 11;
             findAddressGap = 10;
@@ -491,7 +424,7 @@ public class AngryGhidraProvider extends ComponentProvider {
             scrollAvoidAddrsAreaGap = 13;
             avoidAreaGap = 8;
             bufferGap = 0;
-            horizontalFindAddressGap = 21;
+            horizontalCallFunGap = 21;
         }
 
         GroupLayout gl_mainOptionsPanel = new GroupLayout(mainOptionsPanel);
@@ -505,21 +438,24 @@ public class AngryGhidraProvider extends ComponentProvider {
                                 .addContainerGap(73, Short.MAX_VALUE))
                             .addGroup(gl_mainOptionsPanel.createSequentialGroup()
                                 .addGroup(gl_mainOptionsPanel.createParallelGroup(Alignment.LEADING)
-                                    .addGroup(gl_mainOptionsPanel.createParallelGroup(Alignment.LEADING)
-                                        .addGroup(gl_mainOptionsPanel.createSequentialGroup()
-                                            .addComponent(chckbxBlankState, GroupLayout.PREFERRED_SIZE, 134, GroupLayout.PREFERRED_SIZE)
-                                            .addPreferredGap(ComponentPlacement.RELATED, 18, Short.MAX_VALUE))
-                                        .addGroup(gl_mainOptionsPanel.createSequentialGroup()
-                                            .addComponent(chckbxAvoidAddresses, GroupLayout.PREFERRED_SIZE, 134, GroupLayout.PREFERRED_SIZE)
-                                            .addPreferredGap(ComponentPlacement.RELATED, 18, Short.MAX_VALUE)))
                                     .addGroup(gl_mainOptionsPanel.createSequentialGroup()
-                                        .addGap(horizontalFindAddressGap)
-                                        .addComponent(lbFind, GroupLayout.PREFERRED_SIZE, 102, GroupLayout.PREFERRED_SIZE)
-                                        .addPreferredGap(ComponentPlacement.RELATED)))
+                                        .addComponent(projectALabel, GroupLayout.PREFERRED_SIZE, 134, GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(ComponentPlacement.RELATED, 18, Short.MAX_VALUE))
+                                    .addGroup(gl_mainOptionsPanel.createSequentialGroup()
+                                        .addComponent(projectBLabel, GroupLayout.PREFERRED_SIZE, 134, GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(ComponentPlacement.RELATED, 18, Short.MAX_VALUE))
+                                    .addGroup(gl_mainOptionsPanel.createSequentialGroup()
+                                        .addComponent(lbCallFunA, GroupLayout.PREFERRED_SIZE, 134, GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(ComponentPlacement.RELATED, 18, Short.MAX_VALUE))
+                                    .addGroup(gl_mainOptionsPanel.createSequentialGroup()
+                                        .addComponent(lbCallFunB, GroupLayout.PREFERRED_SIZE, 134, GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(ComponentPlacement.RELATED, 18, Short.MAX_VALUE)))
                                 .addGroup(gl_mainOptionsPanel.createParallelGroup(Alignment.LEADING)
-                                    .addComponent(blankStateTF, GroupLayout.DEFAULT_SIZE, 54, Short.MAX_VALUE)
-                                    .addComponent(dstAddressTF, GroupLayout.DEFAULT_SIZE, 54, Short.MAX_VALUE)
-                                    .addComponent(scrollAvoidAddrsArea, GroupLayout.DEFAULT_SIZE, 54, Short.MAX_VALUE))
+                                    .addComponent(projectACombo, GroupLayout.DEFAULT_SIZE, 54, Short.MAX_VALUE)
+                                    .addComponent(projectBCombo, GroupLayout.DEFAULT_SIZE, 54, Short.MAX_VALUE)
+                                    .addComponent(callFunTFA, GroupLayout.DEFAULT_SIZE, 54, Short.MAX_VALUE)
+                                    .addComponent(callFunTFB, GroupLayout.DEFAULT_SIZE, 54, Short.MAX_VALUE)
+                                    /*.addComponent(scrollAvoidAddrsArea, GroupLayout.DEFAULT_SIZE, 54, Short.MAX_VALUE)*/)
                                 .addGap(15))))
         );
 
@@ -530,27 +466,42 @@ public class AngryGhidraProvider extends ComponentProvider {
                     .addComponent(chckbxAutoLoadLibs)
                     .addGap(bufferGap)
                     .addGroup(gl_mainOptionsPanel.createParallelGroup(Alignment.BASELINE)
-                            .addGroup(gl_mainOptionsPanel.createSequentialGroup()
-                                    .addGap(blankStateCBGap)
-                                    .addComponent(chckbxBlankState))
-                            .addGroup(gl_mainOptionsPanel.createSequentialGroup()
-                                    .addGap(blankStateTFGap)
-                                    .addComponent(blankStateTF, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)))
-                    .addGroup(gl_mainOptionsPanel.createSequentialGroup()
-                        .addGroup(gl_mainOptionsPanel.createParallelGroup(Alignment.BASELINE)
-                            .addGroup(gl_mainOptionsPanel.createSequentialGroup()
-                                    .addGap(findAddressGap)
-                                    .addComponent(lbFind))
-                            .addGroup(gl_mainOptionsPanel.createSequentialGroup()
-                                    .addGap(10)
-                                    .addComponent(dstAddressTF, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)))
+                        .addGroup(gl_mainOptionsPanel.createSequentialGroup()
+                            .addGap(blankStateCBGap)
+                            .addComponent(projectALabel))
+                        .addGroup(gl_mainOptionsPanel.createSequentialGroup()
+                            .addGap(blankStateTFGap)
+                            .addComponent(projectACombo, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)))
+                    .addGroup(gl_mainOptionsPanel.createParallelGroup(Alignment.BASELINE)
+                        .addGroup(gl_mainOptionsPanel.createSequentialGroup()
+                            .addGap(blankStateCBGap)
+                            .addComponent(projectBLabel))
+                        .addGroup(gl_mainOptionsPanel.createSequentialGroup()
+                            .addGap(blankStateTFGap)
+                            .addComponent(projectBCombo, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)))
+                    .addGroup(gl_mainOptionsPanel.createParallelGroup(Alignment.BASELINE)
+                        .addGroup(gl_mainOptionsPanel.createSequentialGroup()
+                                .addGap(findAddressGap)
+                                .addComponent(lbCallFunA))
+                        .addGroup(gl_mainOptionsPanel.createSequentialGroup()
+                                .addGap(10)
+                                .addComponent(callFunTFA, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)))
+                    .addGroup(gl_mainOptionsPanel.createParallelGroup(Alignment.BASELINE)
+                        .addGroup(gl_mainOptionsPanel.createSequentialGroup()
+                            .addGap(findAddressGap)
+                            .addComponent(lbCallFunB))
+                        .addGroup(gl_mainOptionsPanel.createSequentialGroup()
+                            .addGap(10)
+                            .addComponent(callFunTFB, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)))
+
+                        /*
                         .addGroup(gl_mainOptionsPanel.createParallelGroup(Alignment.BASELINE)
                             .addGroup(gl_mainOptionsPanel.createSequentialGroup()
                                 .addGap(avoidAreaGap)
                                 .addComponent(chckbxAvoidAddresses))
                             .addGroup(gl_mainOptionsPanel.createSequentialGroup()
                                 .addGap(scrollAvoidAddrsAreaGap)
-                                .addComponent(scrollAvoidAddrsArea, GroupLayout.PREFERRED_SIZE, 45, Short.MAX_VALUE))))
+                                .addComponent(scrollAvoidAddrsArea, GroupLayout.PREFERRED_SIZE, 45, Short.MAX_VALUE)))*/
                     .addContainerGap())
         );
         gl_mainOptionsPanel.setAutoCreateContainerGaps(false);
@@ -1230,6 +1181,7 @@ public class AngryGhidraProvider extends ComponentProvider {
                     auto_load_libs = true;
                 }
                 angr_options.put("auto_load_libs", auto_load_libs);
+                /*
                 if (chckbxBlankState.isSelected()) {
                     if (!blankStateTF.getText().matches("0x[0-9A-Fa-f]+")) {
                         statusLabel.setForeground(Color.red);
@@ -1239,12 +1191,18 @@ public class AngryGhidraProvider extends ComponentProvider {
                     String blank_state = blankStateTF.getText();
                     angr_options.put("blank_state", blank_state);
                 }
-                if (!dstAddressTF.getText().matches("0x[0-9A-Fa-f]+")) {
+                */
+                if (!callFunTFA.getText().matches("0x[0-9A-Fa-f]+")) {
                     statusLabel.setForeground(Color.red);
                     statusLabel.setText("[–] Error: enter the correct destination address in hex format!");
                     return;
                 }
-                String find_addr = dstAddressTF.getText();
+                if (!callFunTFB.getText().matches("0x[0-9A-Fa-f]+")) {
+                    statusLabel.setForeground(Color.red);
+                    statusLabel.setText("[–] Error: enter the correct destination address in hex format!");
+                    return;
+                }
+                String find_addr = callFunTFA.getText();
                 angr_options.put("find_address", find_addr);
                 if (chckbxAvoidAddresses.isSelected()) {
                     if (!avoidTextArea.getText().replaceAll("\\s+", "").matches("[0x0-9a-fA-F, /,]+")) {
@@ -1328,15 +1286,15 @@ public class AngryGhidraProvider extends ComponentProvider {
                     }
                     angr_options.put("hooks", hookList);
                 }
-                String binary_path = thisProgram.getExecutablePath();
+                String binary_path = focusedProgram.getExecutablePath();
                 if (isWindows) {
                     binary_path = binary_path.replaceFirst("/", "");
                     binary_path = binary_path.replace("/", "\\");
                 }
                 angr_options.put("binary_file", binary_path);
-                angr_options.put("base_address", "0x" + Long.toHexString(thisProgram.getMinAddress().getOffset()));
-                if (thisProgram.getExecutableFormat().contains("Raw Binary")) {
-                    String language = thisProgram.getLanguage().toString();
+                angr_options.put("base_address", "0x" + Long.toHexString(focusedProgram.getMinAddress().getOffset()));
+                if (focusedProgram.getExecutableFormat().contains("Raw Binary")) {
+                    String language = focusedProgram.getLanguage().toString();
                     String arch = language.substring(0, language.indexOf("/"));
                     angr_options.put("raw_binary_arch", arch);
                 }
@@ -1368,31 +1326,24 @@ public class AngryGhidraProvider extends ComponentProvider {
         angrProcessing.setSolutionExternal(null);
         angrProcessing.clearTraceList(true);
 
-        // Reset blank state address
-        blankStateTF.setText("");
-        chckbxBlankState.setSelected(false);
-        Address blankStateAddress = addressStorage.getBlankStateAddress();
-        if (blankStateAddress != null) {
-            mColorService.resetColor(blankStateAddress);
-            addressStorage.setBlankStateAddress(null);
+        // Reset call addresses
+        callFunTFA.setText("");
+        Address dstAddressA = addressStorage.getCallFunAddrA();
+        if (dstAddressA != null) {
+            mColorService.resetColor(programA(), dstAddressA);
+            addressStorage.setCallFunAddressA(null);
+        }
+
+        callFunTFB.setText("");
+        Address dstAddressB = addressStorage.getCallFunAddrB();
+        if (dstAddressB != null) {
+            mColorService.resetColor(programB(), dstAddressB);
+            addressStorage.setCallFunAddressB(null);
         }
 
         // Reset find address
-        dstAddressTF.setText("");
-        Address dstAddress = addressStorage.getDestinationAddress();
-        if (dstAddress != null) {
-            mColorService.resetColor(dstAddress);
-            addressStorage.setDestinationAddress(null);
-        }
+        callFunTFB.setText("");
 
-        // Reset avoid addresses mainPanel
-        avoidTextArea.setText("");
-        for (Address address : addressStorage.getAvoidAddresses()){
-            mColorService.resetColor(address);
-        }
-        addressStorage.clearAvoidAddresses();
-        chckbxAvoidAddresses.setSelected(false);
-        scrollAvoidAddrsArea.setVisible(false);
         mainOptionsPanel.revalidate();
 
         // Reset arguments mainPanel
@@ -1489,20 +1440,16 @@ public class AngryGhidraProvider extends ComponentProvider {
                 value.matches("[0-9]+") || value.contains("sv"));
     }
 
-    public JTextField getFindAddressTF() {
-        return dstAddressTF;
+    public JTextField getCallFunA() {
+        return callFunTFA;
     }
 
-    public JTextField getBSAddressTF() {
-        return blankStateTF;
+    public JTextField getCallFunB() {
+        return callFunTFB;
     }
 
     public JTextArea getTextArea() {
         return avoidTextArea;
-    }
-
-    public JCheckBox getCBBlankState() {
-        return chckbxBlankState;
     }
 
     public JCheckBox getCBAvoidAddresses() {
@@ -1606,9 +1553,73 @@ public class AngryGhidraProvider extends ComponentProvider {
     }
 
     public void setProgram(Program program) {
+        focusedProgram = program;
         if (program != null) {
-            thisProgram = program;
+            availablePrograms.add(program);
+            refreshComboBoxes();
         }
+    }
+
+    public void programOpened(Program program) {
+        if (program != null) {
+            availablePrograms.add(program);
+            refreshComboBoxes();
+        }
+    }
+
+    public void programClosed(Program program) {
+        if (program != null) {
+            availablePrograms.remove(program);
+            refreshComboBoxes();
+        }
+    }
+
+    private void refreshComboBoxes() {
+        refreshComboBox(projectACombo);
+        refreshComboBox(projectBCombo);
+        mainOptionsPanel.repaint();
+        mainOptionsPanel.revalidate();
+    }
+
+    public Program getFocusedProgram() {
+        return focusedProgram;
+    }
+
+    private void refreshComboBox(JComboBox<String> box) {
+        String selectedItem = (String) box.getSelectedItem();
+        box.removeAllItems();
+        box.addItem("");
+        boolean containsPrevSelected = false;
+        if (selectedItem.equals("")) {
+            containsPrevSelected = true;
+        }
+        for (Program p : availablePrograms) {
+            box.addItem(p.getName());
+            if (p.getName().equals(selectedItem)) {
+                containsPrevSelected = true;
+            }
+        }
+        if (containsPrevSelected) {
+            box.setSelectedItem(selectedItem);
+        }
+    }
+
+    public Program programA() {
+        return getProgram(projectACombo);
+    }
+
+    public Program programB() {
+        return getProgram(projectBCombo);
+    }
+
+    private Program getProgram(JComboBox<String> comboBox) {
+        String selectedItem = (String) comboBox.getSelectedItem();
+        for (Program p : availablePrograms) {
+            if (p.getName().equals(selectedItem)) {
+                return p;
+            }
+        }
+        return null;
     }
 
     public void setHookWindowState(boolean value) {
