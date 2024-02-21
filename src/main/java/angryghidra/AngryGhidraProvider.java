@@ -10,7 +10,6 @@ import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.FileWriter;
 import java.util.*;
-import java.util.List;
 import java.util.Map.Entry;
 import javax.swing.*;
 import javax.swing.GroupLayout.Alignment;
@@ -40,6 +39,7 @@ public class AngryGhidraProvider extends ComponentProvider {
     private int guiArgNextId;
     private int guiMemNextId;
     private int guiStoreNextId;
+    private int guiMallocNextId;
     private String tmpDir;
     private Program focusedProgram;
     private HashSet<Program> availablePrograms = new HashSet<>();
@@ -57,6 +57,7 @@ public class AngryGhidraProvider extends ComponentProvider {
     private JPanel argSetterPanel;
     private JPanel vectorsPanel;
     private JPanel regPanel;
+    private JPanel mallocPanel;
     private JScrollPane scrollSolutionTextArea;
     private JScrollPane scrollAvoidAddrsArea;
     private JComboBox<String> projectACombo;
@@ -65,11 +66,13 @@ public class AngryGhidraProvider extends ComponentProvider {
     private JTextField callFunTFB;
     private JTextField valueTF;
     private JTextField registerTF;
-    private IntegerTextField firstArgTF;
+    private JTextField mallocNameTF;
+    private JTextField firstArgTF;
     private IntegerTextField vectorAddressTF;
     private IntegerTextField vectorLenTF;
     private IntegerTextField memStoreAddrTF;
     private IntegerTextField memStoreValueTF;
+    private IntegerTextField mallocSizeTF;
     private JCheckBox chckbxAvoidAddresses;
     private JCheckBox chckbxAutoLoadLibs;
     private JCheckBox chckbxArg;
@@ -81,7 +84,9 @@ public class AngryGhidraProvider extends ComponentProvider {
     private JLabel lbStoreAddr;
     private JLabel lbStoreVal;
     private JLabel lblWriteToMemory;
-    private JLabel lbArgLen;
+    private JLabel lbArgContent;
+    private JLabel lbMallocName;
+    private JLabel lbMallocSize;
     private JButton btnReset;
     private JButton btnRun;
     private JButton btnStop;
@@ -90,8 +95,9 @@ public class AngryGhidraProvider extends ComponentProvider {
     private HashMap <IntegerTextField, IntegerTextField> vectors;
     private HashMap <IntegerTextField, IntegerTextField> memStore;
     private HashMap <JTextField, JTextField> presetRegs;
+    private HashMap<JTextField, IntegerTextField> mallocedChunks;
     private HashMap <String[], String[][]> hooks;
-    private ArrayList <IntegerTextField> argsTF;
+    private ArrayList <JTextField> argsTF;
     private ArrayList <JButton> delRegsBtns;
     private ArrayList <JButton> delMemBtns;
     private ArrayList <JButton> delStoreBtns;
@@ -129,13 +135,15 @@ public class AngryGhidraProvider extends ComponentProvider {
         guiMemNextId = 2;
         guiRegNextId = 2;
         guiStoreNextId = 2;
+        guiMallocNextId = 2;
         delRegsBtns = new ArrayList <JButton>();
         delBtnArgs = new ArrayList <JButton>();
         delMemBtns = new ArrayList <JButton>();
         delStoreBtns = new ArrayList <JButton>();
         delHookBtns = new ArrayList <JButton>();
-        argsTF = new ArrayList <IntegerTextField>();
+        argsTF = new ArrayList <JTextField>();
         presetRegs = new HashMap<>();
+        mallocedChunks = new HashMap<>();
         vectors = new HashMap<>();
         memStore = new HashMap<>();
         hooks = new HashMap <String[], String[][]>();
@@ -188,6 +196,9 @@ public class AngryGhidraProvider extends ComponentProvider {
         TitledBorder borderSA = BorderFactory.createTitledBorder("Program arguments");
         borderSA.setTitleFont(sansSerif12);
 
+        TitledBorder borderMalloc = BorderFactory.createTitledBorder("Malloced chunks");
+        borderMalloc.setTitleFont(sansSerif12);
+
         argSetterPanel = new JPanel();
         vectorsPanel = new JPanel();
         regPanel = new JPanel();
@@ -211,6 +222,157 @@ public class AngryGhidraProvider extends ComponentProvider {
         argumentsPanel = new JPanel();
         argumentsPanel.setForeground(new Color(46, 139, 87));
         argumentsPanel.setBorder(borderSA);
+
+        mallocPanel = new JPanel();
+        mallocPanel.setForeground(new Color(46, 139, 87));
+        mallocPanel.setBorder(borderMalloc);
+
+        // Malloc panel
+        GridBagLayout gbl_mallocPanel = new GridBagLayout();
+        gbl_mallocPanel.columnWidths = new int[] {
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+        };
+        gbl_mallocPanel.rowHeights = new int[] {
+                0,
+                0,
+                0
+        };
+        gbl_mallocPanel.columnWeights = new double[] {
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                Double.MIN_VALUE
+        };
+        gbl_mallocPanel.rowWeights = new double[] {
+                0.0,
+                0.0,
+                Double.MIN_VALUE
+        };
+        mallocPanel.setLayout(gbl_mallocPanel);
+
+        lbMallocName = new JLabel("Name");
+        lbMallocName.setFont(sansSerif12);
+        GridBagConstraints gbc_lbMallocName = new GridBagConstraints();
+        gbc_lbMallocName.weightx = 1.0;
+        gbc_lbMallocName.insets = new Insets(0, 0, 0, 5);
+        gbc_lbMallocName.gridx = 1;
+        gbc_lbMallocName.gridy = 0;
+        mallocPanel.add(lbMallocName, gbc_lbMallocName);
+
+        lbMallocSize = new JLabel("Size");
+        lbMallocSize.setFont(sansSerif12);
+        GridBagConstraints gbc_lbMallocSize = new GridBagConstraints();
+        gbc_lbMallocSize.weightx = 1.0;
+        gbc_lbMallocSize.insets = new Insets(0, 0, 0, 5);
+        gbc_lbMallocSize.gridx = 3;
+        gbc_lbMallocSize.gridy = 0;
+        mallocPanel.add(lbMallocSize, gbc_lbMallocSize);
+
+        JButton btnMallocAddButton = new JButton("");
+        GridBagConstraints gbc_btnMallocAddButton = new GridBagConstraints();
+        gbc_btnMallocAddButton.anchor = GridBagConstraints.CENTER;
+        gbc_btnMallocAddButton.fill = GridBagConstraints.HORIZONTAL;
+        gbc_btnMallocAddButton.insets = new Insets(0, 0, 0, 5);
+        gbc_btnMallocAddButton.gridx = 0;
+        gbc_btnMallocAddButton.gridy = 1;
+        gbc_btnMallocAddButton.weighty = 0.1;
+        mallocPanel.add(btnMallocAddButton, gbc_btnMallocAddButton);
+        btnMallocAddButton.setBorder(null);
+        btnMallocAddButton.setContentAreaFilled(false);
+        btnMallocAddButton.setIcon(addIcon);
+
+        btnMallocAddButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                JTextField regTF = new JTextField();
+                regTF.setColumns(5);
+                GridBagConstraints gbc_regTF = new GridBagConstraints();
+                gbc_regTF.fill = GridBagConstraints.HORIZONTAL;
+                gbc_regTF.anchor = GridBagConstraints.CENTER;
+                gbc_regTF.gridx = 1;
+                gbc_regTF.insets = new Insets(0, 0, 0, 5);
+                gbc_regTF.gridy = guiMallocNextId;
+                gbc_regTF.weightx = 1;
+                gbc_regTF.weighty = 0.1;
+                mallocPanel.add(regTF, gbc_regTF);
+
+                IntegerTextField valTF = new IntegerTextField();
+                valTF.setDecimalMode();
+                //valTF.setColumns(5);
+                GridBagConstraints gbc_valTF = new GridBagConstraints();
+                gbc_valTF.fill = GridBagConstraints.HORIZONTAL;
+                gbc_valTF.anchor = GridBagConstraints.CENTER;
+                gbc_valTF.insets = new Insets(0, 0, 0, 5);
+                gbc_valTF.gridx = 3;
+                gbc_valTF.gridy = guiMallocNextId;
+                gbc_valTF.weightx = 1;
+                gbc_valTF.weighty = 0.1;
+                mallocPanel.add(valTF.getComponent(), gbc_valTF);
+                mallocedChunks.put(regTF, valTF);
+
+                JButton btnDel = new JButton("");
+                btnDel.setBorder(null);
+                btnDel.setContentAreaFilled(false);
+                btnDel.setIcon(deleteIcon);
+                GridBagConstraints gbc_btnDel = new GridBagConstraints();
+                gbc_btnDel.insets = new Insets(0, 0, 0, 5);
+                gbc_btnDel.fill = GridBagConstraints.HORIZONTAL;
+                gbc_btnDel.anchor = GridBagConstraints.CENTER;
+                gbc_btnDel.gridx = 0;
+                gbc_btnDel.gridy = guiMallocNextId++;
+                gbc_btnDel.weighty = 0.1;
+                mallocPanel.add(btnDel, gbc_btnDel);
+                delRegsBtns.add(btnDel);
+                btnDel.addActionListener(new ActionListener() {
+                    public void actionPerformed(ActionEvent actionEvent) {
+                        guiMallocNextId--;
+                        delRegsBtns.remove(btnDel);
+                        mallocedChunks.remove(regTF, valTF);
+                        mallocPanel.remove(regTF);
+                        mallocPanel.remove(valTF.getComponent());
+                        mallocPanel.remove(btnDel);
+                        mallocPanel.repaint();
+                        mallocPanel.revalidate();
+                    }
+                });
+                mallocPanel.repaint();
+                mallocPanel.revalidate();
+            }
+        });
+
+        mallocNameTF = new JTextField();
+        mallocNameTF.setColumns(5);
+        GridBagConstraints gbc_mallocNameTF = new GridBagConstraints();
+        gbc_mallocNameTF.insets = new Insets(0, 0, 0, 5);
+        gbc_mallocNameTF.anchor = GridBagConstraints.CENTER;
+        gbc_mallocNameTF.fill = GridBagConstraints.HORIZONTAL;
+        gbc_mallocNameTF.gridx = 1;
+        gbc_mallocNameTF.gridy = 1;
+        gbc_mallocNameTF.weightx = 1;
+        gbc_mallocNameTF.weighty = 0.1;
+        mallocPanel.add(mallocNameTF, gbc_mallocNameTF);
+
+        mallocSizeTF = new IntegerTextField();
+        mallocSizeTF.setDecimalMode();
+        GridBagConstraints gbc_MallocSizeTF = new GridBagConstraints();
+        gbc_MallocSizeTF.insets = new Insets(0, 0, 0, 5);
+        gbc_MallocSizeTF.fill = GridBagConstraints.HORIZONTAL;
+        gbc_MallocSizeTF.anchor = GridBagConstraints.CENTER;
+        gbc_MallocSizeTF.gridx = 3;
+        gbc_MallocSizeTF.gridy = 1;
+        gbc_MallocSizeTF.weightx = 1;
+        gbc_MallocSizeTF.weighty = 0.1;
+        mallocPanel.add(mallocSizeTF.getComponent(), gbc_MallocSizeTF);
+
+        mallocedChunks.put(mallocNameTF, mallocSizeTF);
+
+        // End malloc panel
 
         GroupLayout gl_argumentsPanel = new GroupLayout(argumentsPanel);
         gl_argumentsPanel.setHorizontalGroup(
@@ -273,7 +435,7 @@ public class AngryGhidraProvider extends ComponentProvider {
         btnAddArg.setBorder(null);
         btnAddArg.setVisible(false);
 
-        lbArgLen = new JLabel("Length");
+        lbArgContent = new JLabel("Content");
         GridBagConstraints gbc_lbArgLen = new GridBagConstraints();
         gbc_lbArgLen.insets = new Insets(0, 0, 0, 5);
         gbc_lbArgLen.anchor = GridBagConstraints.CENTER;
@@ -281,11 +443,11 @@ public class AngryGhidraProvider extends ComponentProvider {
         gbc_lbArgLen.gridx = 1;
         gbc_lbArgLen.gridy = 0;
         gbc_lbArgLen.weightx = 1;
-        argSetterPanel.add(lbArgLen, gbc_lbArgLen);
-        lbArgLen.setFont(sansSerif12);
-        lbArgLen.setVisible(false);
+        argSetterPanel.add(lbArgContent, gbc_lbArgLen);
+        lbArgContent.setFont(sansSerif12);
+        lbArgContent.setVisible(false);
 
-        firstArgTF = new IntegerTextField();
+        firstArgTF = new JTextField();
         GridBagConstraints gbc_TFArglen = new GridBagConstraints();
         gbc_TFArglen.insets = new Insets(0, 0, 0, 5);
         gbc_TFArglen.fill = GridBagConstraints.HORIZONTAL;
@@ -295,30 +457,30 @@ public class AngryGhidraProvider extends ComponentProvider {
         gbc_TFArglen.gridy = 1;
         gbc_TFArglen.weightx = 1;
         gbc_TFArglen.weighty = 0.1;
-        argSetterPanel.add(firstArgTF.getComponent(), gbc_TFArglen);
-        firstArgTF.getComponent().setVisible(false);
+        argSetterPanel.add(firstArgTF, gbc_TFArglen);
+        firstArgTF.setVisible(false);
         chckbxArg.addItemListener(
             new ItemListener() {
                 public void itemStateChanged(ItemEvent e) {
                     if (chckbxArg.isSelected()) {
-                        firstArgTF.getComponent().setVisible(true);
-                        lbArgLen.setVisible(true);
+                        firstArgTF.setVisible(true);
+                        lbArgContent.setVisible(true);
                         btnAddArg.setVisible(true);
                         for (JButton btnDel: delBtnArgs) {
                             btnDel.setVisible(true);
                         }
-                        for (IntegerTextField argTF: argsTF) {
-                            argTF.getComponent().setVisible(true);
+                        for (JTextField argTF: argsTF) {
+                            argTF.setVisible(true);
                         }
                     } else {
-                        firstArgTF.getComponent().setVisible(false);
-                        lbArgLen.setVisible(false);
+                        firstArgTF.setVisible(false);
+                        lbArgContent.setVisible(false);
                         btnAddArg.setVisible(false);
                         for (JButton btnDel: delBtnArgs) {
                             btnDel.setVisible(false);
                         }
-                        for (IntegerTextField argTF: argsTF) {
-                            argTF.getComponent().setVisible(false);
+                        for (JTextField argTF: argsTF) {
+                            argTF.setVisible(false);
                         }
                     }
                 }
@@ -327,7 +489,7 @@ public class AngryGhidraProvider extends ComponentProvider {
 
         btnAddArg.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                IntegerTextField argTF = new IntegerTextField();
+                JTextField argTF = new JTextField();
                 GridBagConstraints gbc_TFArg = new GridBagConstraints();
                 gbc_TFArg.fill = GridBagConstraints.HORIZONTAL;
                 gbc_TFArg.anchor = GridBagConstraints.CENTER;
@@ -337,7 +499,7 @@ public class AngryGhidraProvider extends ComponentProvider {
                 gbc_TFArg.gridy = guiArgNextId;
                 gbc_TFArg.weightx = 1;
                 gbc_TFArg.weighty = 0.1;
-                argSetterPanel.add(argTF.getComponent(), gbc_TFArg);
+                argSetterPanel.add(argTF, gbc_TFArg);
                 argsTF.add(argTF);
 
                 JButton btnDel = new JButton("");
@@ -356,7 +518,7 @@ public class AngryGhidraProvider extends ComponentProvider {
                 btnDel.addActionListener(new ActionListener() {
                     public void actionPerformed(ActionEvent actionEvent) {
                         guiArgNextId--;
-                        argSetterPanel.remove(argTF.getComponent());
+                        argSetterPanel.remove(argTF);
                         argSetterPanel.remove(btnDel);
                         delBtnArgs.remove(btnDel);
                         argsTF.remove(argTF);
@@ -1096,6 +1258,9 @@ public class AngryGhidraProvider extends ComponentProvider {
                                 .addGap(10)
                                 .addComponent(mainOptionsPanel, GroupLayout.DEFAULT_SIZE, 275, Short.MAX_VALUE))
                             .addGroup(gl_mainPanel.createSequentialGroup()
+                                .addGap(10)
+                                .addComponent(mallocPanel, GroupLayout.DEFAULT_SIZE, 275, Short.MAX_VALUE))
+                            .addGroup(gl_mainPanel.createSequentialGroup()
                                 .addContainerGap()
                                 .addComponent(argumentsPanel, GroupLayout.DEFAULT_SIZE, 275, Short.MAX_VALUE))
                             .addGroup(gl_mainPanel.createSequentialGroup()
@@ -1112,6 +1277,8 @@ public class AngryGhidraProvider extends ComponentProvider {
                     .addGroup(gl_mainPanel.createSequentialGroup()
                         .addGap(10)
                         .addComponent(mainOptionsPanel, GroupLayout.DEFAULT_SIZE, 178, Short.MAX_VALUE)
+                        .addGap(2)
+                        .addComponent(mallocPanel, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE)
                         .addGap(2)
                         .addComponent(argumentsPanel, GroupLayout.DEFAULT_SIZE, 81, Short.MAX_VALUE)
                         .addPreferredGap(ComponentPlacement.RELATED)
@@ -1218,7 +1385,7 @@ public class AngryGhidraProvider extends ComponentProvider {
                         JSONObject argDetails = new JSONObject();
                         int id = 1;
                         argDetails.put(String.valueOf(id++), firstArgTF.getText());
-                        for (IntegerTextField itf : argsTF) {
+                        for (JTextField itf : argsTF) {
                             String value = itf.getText();
                             if (!value.isEmpty()) {
                                 argDetails.put(String.valueOf(id), value);
@@ -1346,20 +1513,24 @@ public class AngryGhidraProvider extends ComponentProvider {
 
         mainOptionsPanel.revalidate();
 
+        // Reset malloc panel
+        guiMallocNextId = 2;
+        // TODO: Rest of reset
+
         // Reset arguments mainPanel
         guiArgNextId = 2;
-        lbArgLen.setVisible(false);
+        lbArgContent.setVisible(false);
         btnAddArg.setVisible(false);
         for (JButton btnDel: delBtnArgs) {
             argSetterPanel.remove(btnDel);
         }
-        for (IntegerTextField argTF : argsTF) {
-            argSetterPanel.remove(argTF.getComponent());
+        for (JTextField argTF : argsTF) {
+            argSetterPanel.remove(argTF);
         }
         delBtnArgs.clear();
         argsTF.clear();
         firstArgTF.setText("");
-        firstArgTF.getComponent().setVisible(false);
+        firstArgTF.setVisible(false);
         chckbxArg.setSelected(false);
         argSetterPanel.repaint();
         argSetterPanel.revalidate();
