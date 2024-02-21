@@ -30,7 +30,7 @@ import javafx.embed.swing.JFXPanel;
 import javafx.application.Platform;
 
 public class AngryGhidraProvider extends ComponentProvider {
-    public final String htmlString = "<html>Registers<br/>Hint: to create and store symbolic vector enter \"sv{length}\", for example \"sv16\"</html>";
+    public final String htmlString = "<html>Memory<br/>Hint: to create and store an integer literal enter \"bvv(val, nbits)\", for example \"bvv(0xdeadbeef, 32)\"</html>";
     public final String configuringString = "[+] Configuring options";
     private boolean isHookWindowClosed;
     private boolean isTerminated;
@@ -56,8 +56,6 @@ public class AngryGhidraProvider extends ComponentProvider {
     private JPanel hookLablesPanel;
     private JPanel writeMemoryPanel;
     private JPanel argSetterPanel;
-    private JPanel vectorsPanel;
-    private JPanel regPanel;
     private JPanel mallocPanel;
     private JPanel symbolsPanel;
     private JScrollPane scrollSolutionTextArea;
@@ -202,7 +200,7 @@ public class AngryGhidraProvider extends ComponentProvider {
         TitledBorder borderCSO = BorderFactory.createTitledBorder("Custom symbolic options");
         borderCSO.setTitleFont(sansSerif12);
 
-        TitledBorder borderSA = BorderFactory.createTitledBorder("Program arguments");
+        TitledBorder borderSA = BorderFactory.createTitledBorder("Function arguments");
         borderSA.setTitleFont(sansSerif12);
 
         TitledBorder borderMalloc = BorderFactory.createTitledBorder("Malloced chunks");
@@ -212,8 +210,6 @@ public class AngryGhidraProvider extends ComponentProvider {
         borderSymbolic.setTitleFont(sansSerif12);
 
         argSetterPanel = new JPanel();
-        vectorsPanel = new JPanel();
-        regPanel = new JPanel();
         writeMemoryPanel = new JPanel();
         hookLablesPanel = new JPanel();
         statusPanel = new JPanel();
@@ -834,12 +830,6 @@ public class AngryGhidraProvider extends ComponentProvider {
         gl_mainOptionsPanel.setHonorsVisibility(false);
         mainOptionsPanel.setLayout(gl_mainOptionsPanel);
 
-        JLabel lbMemory = new JLabel("Store symbolic vector:");
-        lbMemory.setHorizontalAlignment(SwingConstants.CENTER);
-        lbMemory.setFont(sansSerif12);
-        JLabel lbRegisters = new JLabel(htmlString);
-        lbRegisters.setFont(sansSerif12);
-
         GridBagLayout gbl_writeMemoryPanel = new GridBagLayout();
         gbl_writeMemoryPanel.columnWidths = new int[] {
             0,
@@ -869,7 +859,7 @@ public class AngryGhidraProvider extends ComponentProvider {
         };
         writeMemoryPanel.setLayout(gbl_writeMemoryPanel);
 
-        lblWriteToMemory = new JLabel("Write to memory:");
+        lblWriteToMemory = new JLabel(htmlString);
         lblWriteToMemory.setHorizontalAlignment(SwingConstants.CENTER);
         lblWriteToMemory.setFont(sansSerif12);
 
@@ -990,184 +980,23 @@ public class AngryGhidraProvider extends ComponentProvider {
             gl_customOptionsPanel.createParallelGroup(Alignment.LEADING)
                 .addGroup(gl_customOptionsPanel.createSequentialGroup()
                     .addContainerGap()
-                    .addComponent(vectorsPanel, GroupLayout.DEFAULT_SIZE, 343, Short.MAX_VALUE)
-                    .addGap(25))
-                .addGroup(gl_customOptionsPanel.createSequentialGroup()
-                    .addContainerGap()
                     .addGroup(gl_customOptionsPanel.createParallelGroup(Alignment.LEADING)
                         .addGroup(gl_customOptionsPanel.createSequentialGroup()
-                            .addComponent(lblWriteToMemory)
+                            .addComponent(lblWriteToMemory, GroupLayout.PREFERRED_SIZE, 327, Short.MAX_VALUE)
                             .addPreferredGap(ComponentPlacement.RELATED, 237, GroupLayout.PREFERRED_SIZE))
                         .addComponent(writeMemoryPanel, GroupLayout.DEFAULT_SIZE, 343, Short.MAX_VALUE))
                     .addGap(25))
-                .addGroup(gl_customOptionsPanel.createSequentialGroup()
-                    .addContainerGap()
-                    .addComponent(regPanel, GroupLayout.DEFAULT_SIZE, 343, Short.MAX_VALUE)
-                    .addGap(25))
-                .addGroup(gl_customOptionsPanel.createSequentialGroup()
-                    .addContainerGap()
-                    .addComponent(lbRegisters, GroupLayout.PREFERRED_SIZE, 327, Short.MAX_VALUE)
-                    )
-                .addGroup(gl_customOptionsPanel.createSequentialGroup()
-                    .addComponent(lbMemory, GroupLayout.PREFERRED_SIZE, 148, GroupLayout.PREFERRED_SIZE)
-                    .addContainerGap(232, Short.MAX_VALUE))
         );
         gl_customOptionsPanel.setVerticalGroup(
             gl_customOptionsPanel.createParallelGroup(Alignment.LEADING)
                 .addGroup(gl_customOptionsPanel.createSequentialGroup()
                     .addContainerGap()
-                    .addComponent(lbMemory, GroupLayout.PREFERRED_SIZE, 13, GroupLayout.PREFERRED_SIZE)
-                    .addPreferredGap(ComponentPlacement.RELATED)
-                    .addComponent(vectorsPanel, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
-                    .addGap(23)
                     .addComponent(lblWriteToMemory)
                     .addPreferredGap(ComponentPlacement.RELATED)
                     .addComponent(writeMemoryPanel, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
-                    .addGap(18)
-                    .addComponent(lbRegisters)
-                    .addGap(9)
-                    .addComponent(regPanel, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
                     .addGap(54))
         );
         customOptionsPanel.setLayout(gl_customOptionsPanel);
-
-        GridBagLayout gbl_regPanel = new GridBagLayout();
-        gbl_regPanel.columnWidths = new int[] {
-            0,
-            0,
-            0,
-            0,
-            0
-        };
-        gbl_regPanel.rowHeights = new int[] {
-            0,
-            0
-        };
-        gbl_regPanel.columnWeights = new double[] {
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            Double.MIN_VALUE
-        };
-        gbl_regPanel.rowWeights = new double[] {
-            0.0,
-            0.0
-        };
-        regPanel.setLayout(gbl_regPanel);
-
-        JLabel lblReg = new JLabel("Register");
-        lblReg.setFont(sansSerif12);
-        GridBagConstraints gbc_lblReg = new GridBagConstraints();
-        gbc_lblReg.anchor = GridBagConstraints.SOUTH;
-        gbc_lblReg.insets = new Insets(0, 0, 0, 5);
-        gbc_lblReg.gridx = 1;
-        gbc_lblReg.gridy = 0;
-        gbc_lblReg.weightx = 1;
-        regPanel.add(lblReg, gbc_lblReg);
-
-        JLabel lblValue = new JLabel("  Value ");
-        lblValue.setFont(sansSerif12);
-        GridBagConstraints gbc_lblValue = new GridBagConstraints();
-        gbc_lblValue.anchor = GridBagConstraints.SOUTH;
-        gbc_lblValue.insets = new Insets(0, 0, 0, 5);
-        gbc_lblValue.gridx = 3;
-        gbc_lblValue.gridy = 0;
-        gbc_lblValue.weightx = 1;
-        regPanel.add(lblValue, gbc_lblValue);
-
-        JButton btnAddButton = new JButton("");
-        GridBagConstraints gbc_btnAddButton = new GridBagConstraints();
-        gbc_btnAddButton.anchor = GridBagConstraints.CENTER;
-        gbc_btnAddButton.fill = GridBagConstraints.HORIZONTAL;
-        gbc_btnAddButton.insets = new Insets(0, 0, 0, 5);
-        gbc_btnAddButton.gridx = 0;
-        gbc_btnAddButton.gridy = 1;
-        gbc_btnAddButton.weighty = 0.1;
-        regPanel.add(btnAddButton, gbc_btnAddButton);
-        btnAddButton.setBorder(null);
-        btnAddButton.setContentAreaFilled(false);
-        btnAddButton.setIcon(addIcon);
-
-        valueTF = new JTextField();
-        valueTF.setColumns(5);
-        GridBagConstraints gbc_valueTF = new GridBagConstraints();
-        gbc_valueTF.insets = new Insets(0, 0, 0, 5);
-        gbc_valueTF.anchor = GridBagConstraints.CENTER;
-        gbc_valueTF.fill = GridBagConstraints.HORIZONTAL;
-        gbc_valueTF.gridx = 3;
-        gbc_valueTF.gridy = 1;
-        gbc_valueTF.weightx = 1;
-        gbc_valueTF.weighty = 0.1;
-        regPanel.add(valueTF, gbc_valueTF);
-
-        registerTF = new JTextField();
-        registerTF.setColumns(5);
-        GridBagConstraints gbc_registerTF = new GridBagConstraints();
-        gbc_registerTF.anchor = GridBagConstraints.CENTER;
-        gbc_registerTF.fill = GridBagConstraints.HORIZONTAL;
-        gbc_registerTF.insets = new Insets(0, 0, 0, 5);
-        gbc_registerTF.gridx = 1;
-        gbc_registerTF.gridy = 1;
-        gbc_registerTF.weighty = 0.1;
-        regPanel.add(registerTF, gbc_registerTF);
-
-        btnAddButton.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                JTextField regTF = new JTextField();
-                regTF.setColumns(5);
-                GridBagConstraints gbc_regTF = new GridBagConstraints();
-                gbc_regTF.fill = GridBagConstraints.HORIZONTAL;
-                gbc_regTF.anchor = GridBagConstraints.CENTER;
-                gbc_regTF.gridx = 1;
-                gbc_regTF.insets = new Insets(0, 0, 0, 5);
-                gbc_regTF.gridy = guiRegNextId;
-                gbc_regTF.weightx = 1;
-                gbc_regTF.weighty = 0.1;
-                regPanel.add(regTF, gbc_regTF);
-
-                JTextField valTF = new JTextField();
-                valTF.setColumns(5);
-                GridBagConstraints gbc_valTF = new GridBagConstraints();
-                gbc_valTF.fill = GridBagConstraints.HORIZONTAL;
-                gbc_valTF.anchor = GridBagConstraints.CENTER;
-                gbc_valTF.insets = new Insets(0, 0, 0, 5);
-                gbc_valTF.gridx = 3;
-                gbc_valTF.gridy = guiRegNextId;
-                gbc_valTF.weightx = 1;
-                gbc_valTF.weighty = 0.1;
-                regPanel.add(valTF, gbc_valTF);
-                presetRegs.put(regTF, valTF);
-
-                JButton btnDel = new JButton("");
-                btnDel.setBorder(null);
-                btnDel.setContentAreaFilled(false);
-                btnDel.setIcon(deleteIcon);
-                GridBagConstraints gbc_btnDel = new GridBagConstraints();
-                gbc_btnDel.insets = new Insets(0, 0, 0, 5);
-                gbc_btnDel.fill = GridBagConstraints.HORIZONTAL;
-                gbc_btnDel.anchor = GridBagConstraints.CENTER;
-                gbc_btnDel.gridx = 0;
-                gbc_btnDel.gridy = guiRegNextId++;
-                gbc_btnDel.weighty = 0.1;
-                regPanel.add(btnDel, gbc_btnDel);
-                delRegsBtns.add(btnDel);
-                btnDel.addActionListener(new ActionListener() {
-                    public void actionPerformed(ActionEvent actionEvent) {
-                        guiRegNextId--;
-                        delRegsBtns.remove(btnDel);
-                        presetRegs.remove(regTF, valTF);
-                        regPanel.remove(regTF);
-                        regPanel.remove(valTF);
-                        regPanel.remove(btnDel);
-                        regPanel.repaint();
-                        regPanel.revalidate();
-                    }
-                });
-                regPanel.repaint();
-                regPanel.revalidate();
-            }
-        });
 
         GridBagLayout gbl_vectorsPanel = new GridBagLayout();
         gbl_vectorsPanel.columnWidths = new int[] {
@@ -1194,117 +1023,6 @@ public class AngryGhidraProvider extends ComponentProvider {
             0.0,
             0.0
         };
-        vectorsPanel.setLayout(gbl_vectorsPanel);
-        JButton btnAddMem = new JButton("");
-        GridBagConstraints gbc_btnAddMem = new GridBagConstraints();
-        gbc_btnAddMem.anchor = GridBagConstraints.CENTER;
-        gbc_btnAddMem.fill = GridBagConstraints.HORIZONTAL;
-        gbc_btnAddMem.insets = new Insets(0, 0, 0, 5);
-        gbc_btnAddMem.gridx = 0;
-        gbc_btnAddMem.gridy = 1;
-        gbc_btnAddMem.weighty = 0.1;
-        vectorsPanel.add(btnAddMem, gbc_btnAddMem);
-        btnAddMem.setIcon(addIcon);
-        btnAddMem.setBorder(null);
-        btnAddMem.setContentAreaFilled(false);
-
-        JLabel lbMemAddr = new JLabel("Address");
-        lbMemAddr.setFont(sansSerif12);
-        GridBagConstraints gbc_lbMemAddr = new GridBagConstraints();
-        gbc_lbMemAddr.insets = new Insets(0, 0, 0, 5);
-        gbc_lbMemAddr.gridx = 1;
-        gbc_lbMemAddr.gridy = 0;
-        gbc_lbMemAddr.weightx = 1;
-        vectorsPanel.add(lbMemAddr, gbc_lbMemAddr);
-
-        JLabel lblLentgh = new JLabel("Length");
-        lblLentgh.setFont(sansSerif12);
-        GridBagConstraints gbc_lblLentgh = new GridBagConstraints();
-        gbc_lblLentgh.insets = new Insets(0, 0, 0, 5);
-        gbc_lblLentgh.gridx = 3;
-        gbc_lblLentgh.gridy = 0;
-        gbc_lblLentgh.weightx = 1;
-        vectorsPanel.add(lblLentgh, gbc_lblLentgh);
-
-        vectorAddressTF = new IntegerTextField();
-        vectorAddressTF.setHexMode();
-        GridBagConstraints gbc_vectorAddressTF = new GridBagConstraints();
-        gbc_vectorAddressTF.anchor = GridBagConstraints.CENTER;
-        gbc_vectorAddressTF.fill = GridBagConstraints.HORIZONTAL;
-        gbc_vectorAddressTF.insets = new Insets(0, 0, 0, 5);
-        gbc_vectorAddressTF.gridx = 1;
-        gbc_vectorAddressTF.gridy = 1;
-        gbc_vectorAddressTF.weightx = 1;
-        gbc_vectorAddressTF.weighty = 0.1;
-        vectorsPanel.add(vectorAddressTF.getComponent(), gbc_vectorAddressTF);
-
-        vectorLenTF = new IntegerTextField();
-        GridBagConstraints gbc_vectorLenTF = new GridBagConstraints();
-        gbc_vectorLenTF.insets = new Insets(0, 0, 0, 5);
-        gbc_vectorLenTF.fill = GridBagConstraints.HORIZONTAL;
-        gbc_vectorLenTF.anchor = GridBagConstraints.CENTER;
-        gbc_vectorLenTF.gridx = 3;
-        gbc_vectorLenTF.gridy = 1;
-        gbc_vectorLenTF.weightx = 1;
-        gbc_vectorLenTF.weighty = 0.1;
-        vectorsPanel.add(vectorLenTF.getComponent(), gbc_vectorLenTF);
-
-        btnAddMem.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                IntegerTextField addrTF = new IntegerTextField();
-                addrTF.setHexMode();
-                GridBagConstraints gbc_addrTF = new GridBagConstraints();
-                gbc_addrTF.fill = GridBagConstraints.HORIZONTAL;
-                gbc_addrTF.anchor = GridBagConstraints.CENTER;
-                gbc_addrTF.gridx = 1;
-                gbc_addrTF.insets = new Insets(0, 0, 0, 5);
-                gbc_addrTF.gridy = guiMemNextId;
-                gbc_addrTF.weightx = 1;
-                gbc_addrTF.weighty = 0.1;
-                vectorsPanel.add(addrTF.getComponent(), gbc_addrTF);
-
-                IntegerTextField lenTF = new IntegerTextField();
-                GridBagConstraints gbc_lenTF = new GridBagConstraints();
-                gbc_lenTF.fill = GridBagConstraints.HORIZONTAL;
-                gbc_lenTF.anchor = GridBagConstraints.CENTER;
-                gbc_lenTF.insets = new Insets(0, 0, 0, 5);
-                gbc_lenTF.gridx = 3;
-                gbc_lenTF.gridy = guiMemNextId;
-                gbc_lenTF.weightx = 1;
-                gbc_lenTF.weighty = 0.1;
-                vectorsPanel.add(lenTF.getComponent(), gbc_lenTF);
-                vectors.put(addrTF, lenTF);
-
-                JButton btnDel = new JButton("");
-                btnDel.setBorder(null);
-                btnDel.setContentAreaFilled(false);
-                btnDel.setIcon(deleteIcon);
-                GridBagConstraints gbc_btnDel = new GridBagConstraints();
-                gbc_btnDel.fill = GridBagConstraints.HORIZONTAL;
-                gbc_btnDel.anchor = GridBagConstraints.CENTER;
-                gbc_btnDel.insets = new Insets(0, 0, 0, 5);
-                gbc_btnDel.gridx = 0;
-                gbc_btnDel.gridy = guiMemNextId++;
-                gbc_btnDel.weighty = 0.1;
-                vectorsPanel.add(btnDel, gbc_btnDel);
-                delMemBtns.add(btnDel);
-                btnDel.addActionListener(new ActionListener() {
-                    public void actionPerformed(ActionEvent actionEvent) {
-                        guiMemNextId--;
-                        vectorsPanel.remove(addrTF.getComponent());
-                        vectorsPanel.remove(lenTF.getComponent());
-                        vectorsPanel.remove(btnDel);
-                        delMemBtns.remove(btnDel);
-                        vectors.remove(addrTF, lenTF);
-                        vectorsPanel.repaint();
-                        vectorsPanel.revalidate();
-                    }
-                });
-                vectorsPanel.repaint();
-                vectorsPanel.revalidate();
-            }
-        });
-
 
         lbStatus = new JLabel("Status:");
         lbStatus.setForeground(Color.BLUE);
@@ -1703,24 +1421,6 @@ public class AngryGhidraProvider extends ComponentProvider {
         argSetterPanel.repaint();
         argSetterPanel.revalidate();
 
-        // Reset symbolic vectors in memory
-        guiMemNextId = 2;
-        vectorAddressTF.setText("");
-        vectorLenTF.setText("");
-        for (Entry<IntegerTextField, IntegerTextField> entry : vectors.entrySet()) {
-            IntegerTextField addrTF = entry.getKey();
-            IntegerTextField lenTF = entry.getValue();
-            vectorsPanel.remove(addrTF.getComponent());
-            vectorsPanel.remove(lenTF.getComponent());
-        }
-        for (JButton button : delMemBtns) {
-            vectorsPanel.remove(button);
-        }
-        vectors.clear();
-        delMemBtns.clear();
-        vectorsPanel.repaint();
-        vectorsPanel.revalidate();
-
         // Reset mem set contents
         guiStoreNextId = 2;
         for (Entry<IntegerTextField, IntegerTextField> entry : memStore.entrySet()) {
@@ -1739,23 +1439,10 @@ public class AngryGhidraProvider extends ComponentProvider {
         writeMemoryPanel.repaint();
         writeMemoryPanel.revalidate();
 
-        // Reset preset registers
-        guiRegNextId = 2;
-        for (Entry<JTextField, JTextField> entry : presetRegs.entrySet()) {
-            JTextField regTF = entry.getKey();
-            JTextField valTF = entry.getValue();
-            regPanel.remove(regTF);
-            regPanel.remove(valTF);
-        }
-        for (JButton button : delRegsBtns) {
-            regPanel.remove(button);
-        }
         registerTF.setText("");
         valueTF.setText("");
         delRegsBtns.clear();
         presetRegs.clear();
-        regPanel.repaint();
-        regPanel.revalidate();
 
         // Reset all hooks
         if (hookHandler != null) {
