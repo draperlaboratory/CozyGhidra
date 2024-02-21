@@ -40,6 +40,7 @@ public class AngryGhidraProvider extends ComponentProvider {
     private int guiMemNextId;
     private int guiStoreNextId;
     private int guiMallocNextId;
+    private int guiSymbolsNextId;
     private String tmpDir;
     private Program focusedProgram;
     private HashSet<Program> availablePrograms = new HashSet<>();
@@ -58,6 +59,7 @@ public class AngryGhidraProvider extends ComponentProvider {
     private JPanel vectorsPanel;
     private JPanel regPanel;
     private JPanel mallocPanel;
+    private JPanel symbolsPanel;
     private JScrollPane scrollSolutionTextArea;
     private JScrollPane scrollAvoidAddrsArea;
     private JComboBox<String> projectACombo;
@@ -67,12 +69,14 @@ public class AngryGhidraProvider extends ComponentProvider {
     private JTextField valueTF;
     private JTextField registerTF;
     private JTextField mallocNameTF;
+    private JTextField symbolsNameTF;
     private JTextField firstArgTF;
     private IntegerTextField vectorAddressTF;
     private IntegerTextField vectorLenTF;
     private IntegerTextField memStoreAddrTF;
     private IntegerTextField memStoreValueTF;
     private IntegerTextField mallocSizeTF;
+    private IntegerTextField symbolsSizeTF;
     private JCheckBox chckbxAvoidAddresses;
     private JCheckBox chckbxAutoLoadLibs;
     private JCheckBox chckbxArg;
@@ -87,6 +91,8 @@ public class AngryGhidraProvider extends ComponentProvider {
     private JLabel lbArgContent;
     private JLabel lbMallocName;
     private JLabel lbMallocSize;
+    private JLabel lbSymbolsName;
+    private JLabel lbSymbolsSize;
     private JButton btnReset;
     private JButton btnRun;
     private JButton btnStop;
@@ -96,6 +102,7 @@ public class AngryGhidraProvider extends ComponentProvider {
     private HashMap <IntegerTextField, IntegerTextField> memStore;
     private HashMap <JTextField, JTextField> presetRegs;
     private HashMap<JTextField, IntegerTextField> mallocedChunks;
+    private HashMap<JTextField, IntegerTextField> createdSymbols;
     private HashMap <String[], String[][]> hooks;
     private ArrayList <JTextField> argsTF;
     private ArrayList <JButton> delRegsBtns;
@@ -136,6 +143,7 @@ public class AngryGhidraProvider extends ComponentProvider {
         guiRegNextId = 2;
         guiStoreNextId = 2;
         guiMallocNextId = 2;
+        guiSymbolsNextId = 2;
         delRegsBtns = new ArrayList <JButton>();
         delBtnArgs = new ArrayList <JButton>();
         delMemBtns = new ArrayList <JButton>();
@@ -144,6 +152,7 @@ public class AngryGhidraProvider extends ComponentProvider {
         argsTF = new ArrayList <JTextField>();
         presetRegs = new HashMap<>();
         mallocedChunks = new HashMap<>();
+        createdSymbols = new HashMap<>();
         vectors = new HashMap<>();
         memStore = new HashMap<>();
         hooks = new HashMap <String[], String[][]>();
@@ -199,6 +208,9 @@ public class AngryGhidraProvider extends ComponentProvider {
         TitledBorder borderMalloc = BorderFactory.createTitledBorder("Malloced chunks");
         borderMalloc.setTitleFont(sansSerif12);
 
+        TitledBorder borderSymbolic = BorderFactory.createTitledBorder("Symbolic variables");
+        borderSymbolic.setTitleFont(sansSerif12);
+
         argSetterPanel = new JPanel();
         vectorsPanel = new JPanel();
         regPanel = new JPanel();
@@ -226,6 +238,10 @@ public class AngryGhidraProvider extends ComponentProvider {
         mallocPanel = new JPanel();
         mallocPanel.setForeground(new Color(46, 139, 87));
         mallocPanel.setBorder(borderMalloc);
+
+        symbolsPanel = new JPanel();
+        symbolsPanel.setForeground(new Color(46, 139, 87));
+        symbolsPanel.setBorder(borderSymbolic);
 
         // Malloc panel
         GridBagLayout gbl_mallocPanel = new GridBagLayout();
@@ -373,6 +389,153 @@ public class AngryGhidraProvider extends ComponentProvider {
         mallocedChunks.put(mallocNameTF, mallocSizeTF);
 
         // End malloc panel
+
+        // Symbols panel
+        GridBagLayout gbl_symbolsPanel = new GridBagLayout();
+        gbl_symbolsPanel.columnWidths = new int[] {
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+        };
+        gbl_symbolsPanel.rowHeights = new int[] {
+                0,
+                0,
+                0
+        };
+        gbl_symbolsPanel.columnWeights = new double[] {
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                Double.MIN_VALUE
+        };
+        gbl_symbolsPanel.rowWeights = new double[] {
+                0.0,
+                0.0,
+                Double.MIN_VALUE
+        };
+        symbolsPanel.setLayout(gbl_symbolsPanel);
+
+        lbSymbolsName = new JLabel("Name");
+        lbSymbolsName.setFont(sansSerif12);
+        GridBagConstraints gbc_lbSymbolsName = new GridBagConstraints();
+        gbc_lbSymbolsName.weightx = 1.0;
+        gbc_lbSymbolsName.insets = new Insets(0, 0, 0, 5);
+        gbc_lbSymbolsName.gridx = 1;
+        gbc_lbSymbolsName.gridy = 0;
+        symbolsPanel.add(lbSymbolsName, gbc_lbSymbolsName);
+
+        lbSymbolsSize = new JLabel("Size (bits)");
+        lbSymbolsSize.setFont(sansSerif12);
+        GridBagConstraints gbc_lbSymbolsSize = new GridBagConstraints();
+        gbc_lbSymbolsSize.weightx = 1.0;
+        gbc_lbSymbolsSize.insets = new Insets(0, 0, 0, 5);
+        gbc_lbSymbolsSize.gridx = 3;
+        gbc_lbSymbolsSize.gridy = 0;
+        symbolsPanel.add(lbSymbolsSize, gbc_lbSymbolsSize);
+
+        JButton btnSymbolsAddButton = new JButton("");
+        GridBagConstraints gbc_btnSymbolsAddButton = new GridBagConstraints();
+        gbc_btnSymbolsAddButton.anchor = GridBagConstraints.CENTER;
+        gbc_btnSymbolsAddButton.fill = GridBagConstraints.HORIZONTAL;
+        gbc_btnSymbolsAddButton.insets = new Insets(0, 0, 0, 5);
+        gbc_btnSymbolsAddButton.gridx = 0;
+        gbc_btnSymbolsAddButton.gridy = 1;
+        gbc_btnSymbolsAddButton.weighty = 0.1;
+        symbolsPanel.add(btnSymbolsAddButton, gbc_btnSymbolsAddButton);
+        btnSymbolsAddButton.setBorder(null);
+        btnSymbolsAddButton.setContentAreaFilled(false);
+        btnSymbolsAddButton.setIcon(addIcon);
+
+        btnSymbolsAddButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                JTextField nameTF = new JTextField();
+                nameTF.setColumns(5);
+                GridBagConstraints gbc_regTF = new GridBagConstraints();
+                gbc_regTF.fill = GridBagConstraints.HORIZONTAL;
+                gbc_regTF.anchor = GridBagConstraints.CENTER;
+                gbc_regTF.gridx = 1;
+                gbc_regTF.insets = new Insets(0, 0, 0, 5);
+                gbc_regTF.gridy = guiSymbolsNextId;
+                gbc_regTF.weightx = 1;
+                gbc_regTF.weighty = 0.1;
+                symbolsPanel.add(nameTF, gbc_regTF);
+
+                IntegerTextField valTF = new IntegerTextField();
+                valTF.setDecimalMode();
+                //valTF.setColumns(5);
+                GridBagConstraints gbc_valTF = new GridBagConstraints();
+                gbc_valTF.fill = GridBagConstraints.HORIZONTAL;
+                gbc_valTF.anchor = GridBagConstraints.CENTER;
+                gbc_valTF.insets = new Insets(0, 0, 0, 5);
+                gbc_valTF.gridx = 3;
+                gbc_valTF.gridy = guiSymbolsNextId;
+                gbc_valTF.weightx = 1;
+                gbc_valTF.weighty = 0.1;
+                symbolsPanel.add(valTF.getComponent(), gbc_valTF);
+                createdSymbols.put(nameTF, valTF);
+
+                JButton btnDel = new JButton("");
+                btnDel.setBorder(null);
+                btnDel.setContentAreaFilled(false);
+                btnDel.setIcon(deleteIcon);
+                GridBagConstraints gbc_btnDel = new GridBagConstraints();
+                gbc_btnDel.insets = new Insets(0, 0, 0, 5);
+                gbc_btnDel.fill = GridBagConstraints.HORIZONTAL;
+                gbc_btnDel.anchor = GridBagConstraints.CENTER;
+                gbc_btnDel.gridx = 0;
+                gbc_btnDel.gridy = guiSymbolsNextId++;
+                gbc_btnDel.weighty = 0.1;
+                symbolsPanel.add(btnDel, gbc_btnDel);
+                delRegsBtns.add(btnDel);
+                btnDel.addActionListener(new ActionListener() {
+                    public void actionPerformed(ActionEvent actionEvent) {
+                        guiSymbolsNextId--;
+                        delRegsBtns.remove(btnDel);
+                        createdSymbols.remove(nameTF, valTF);
+                        symbolsPanel.remove(nameTF);
+                        symbolsPanel.remove(valTF.getComponent());
+                        symbolsPanel.remove(btnDel);
+                        symbolsPanel.repaint();
+                        symbolsPanel.revalidate();
+                    }
+                });
+                symbolsPanel.repaint();
+                symbolsPanel.revalidate();
+            }
+        });
+
+        symbolsNameTF = new JTextField();
+        symbolsNameTF.setColumns(5);
+        GridBagConstraints gbc_symbolsNameTF = new GridBagConstraints();
+        gbc_symbolsNameTF.insets = new Insets(0, 0, 0, 5);
+        gbc_symbolsNameTF.anchor = GridBagConstraints.CENTER;
+        gbc_symbolsNameTF.fill = GridBagConstraints.HORIZONTAL;
+        gbc_symbolsNameTF.gridx = 1;
+        gbc_symbolsNameTF.gridy = 1;
+        gbc_symbolsNameTF.weightx = 1;
+        gbc_symbolsNameTF.weighty = 0.1;
+        symbolsPanel.add(symbolsNameTF, gbc_symbolsNameTF);
+
+        symbolsSizeTF = new IntegerTextField();
+        symbolsSizeTF.setDecimalMode();
+        GridBagConstraints gbc_SymbolsSizeTF = new GridBagConstraints();
+        gbc_SymbolsSizeTF.insets = new Insets(0, 0, 0, 5);
+        gbc_SymbolsSizeTF.fill = GridBagConstraints.HORIZONTAL;
+        gbc_SymbolsSizeTF.anchor = GridBagConstraints.CENTER;
+        gbc_SymbolsSizeTF.gridx = 3;
+        gbc_SymbolsSizeTF.gridy = 1;
+        gbc_SymbolsSizeTF.weightx = 1;
+        gbc_SymbolsSizeTF.weighty = 0.1;
+        symbolsPanel.add(symbolsSizeTF.getComponent(), gbc_SymbolsSizeTF);
+
+        createdSymbols.put(symbolsNameTF, symbolsSizeTF);
+
+        // End symbols panel
 
         GroupLayout gl_argumentsPanel = new GroupLayout(argumentsPanel);
         gl_argumentsPanel.setHorizontalGroup(
@@ -1261,6 +1424,9 @@ public class AngryGhidraProvider extends ComponentProvider {
                                 .addGap(10)
                                 .addComponent(mallocPanel, GroupLayout.DEFAULT_SIZE, 275, Short.MAX_VALUE))
                             .addGroup(gl_mainPanel.createSequentialGroup()
+                                .addGap(10)
+                                .addComponent(symbolsPanel, GroupLayout.DEFAULT_SIZE, 275, Short.MAX_VALUE))
+                            .addGroup(gl_mainPanel.createSequentialGroup()
                                 .addContainerGap()
                                 .addComponent(argumentsPanel, GroupLayout.DEFAULT_SIZE, 275, Short.MAX_VALUE))
                             .addGroup(gl_mainPanel.createSequentialGroup()
@@ -1280,9 +1446,11 @@ public class AngryGhidraProvider extends ComponentProvider {
                         .addGap(2)
                         .addComponent(mallocPanel, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE)
                         .addGap(2)
+                        .addComponent(symbolsPanel, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE)
+                        .addGap(2)
                         .addComponent(argumentsPanel, GroupLayout.DEFAULT_SIZE, 81, Short.MAX_VALUE)
                         .addPreferredGap(ComponentPlacement.RELATED)
-                        .addComponent(hookPanel, GroupLayout.DEFAULT_SIZE, 90, Short.MAX_VALUE))
+                        .addComponent(hookPanel, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE))
                     .addGroup(gl_mainPanel.createSequentialGroup()
                         .addContainerGap()
                         .addComponent(customOptionsPanel, GroupLayout.DEFAULT_SIZE, 357, Short.MAX_VALUE)))
