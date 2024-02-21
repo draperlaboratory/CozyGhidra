@@ -30,7 +30,7 @@ import javafx.embed.swing.JFXPanel;
 import javafx.application.Platform;
 
 public class AngryGhidraProvider extends ComponentProvider {
-    public final String htmlString = "<html>Memory<br/>Hint: to create and store an integer literal enter \"bvv(val, nbits)\", for example \"bvv(0xdeadbeef, 32)\"</html>";
+    public final String htmlString = "<html>Memory<br/>Hint: to store an integer literal enter \"bvv(val, nbits)\" in the value field, for example \"bvv(0xdeadbeef, 32)\"</html>";
     public final String configuringString = "[+] Configuring options";
     private boolean isHookWindowClosed;
     private boolean isTerminated;
@@ -71,8 +71,8 @@ public class AngryGhidraProvider extends ComponentProvider {
     private JTextField firstArgTF;
     private IntegerTextField vectorAddressTF;
     private IntegerTextField vectorLenTF;
-    private IntegerTextField memStoreAddrTF;
-    private IntegerTextField memStoreValueTF;
+    private JTextField memStoreAddrTF;
+    private JTextField memStoreValueTF;
     private IntegerTextField mallocSizeTF;
     private IntegerTextField symbolsSizeTF;
     private JCheckBox chckbxAvoidAddresses;
@@ -97,7 +97,7 @@ public class AngryGhidraProvider extends ComponentProvider {
     private JButton btnAddWM;
     private JButton btnAddArg;
     private HashMap <IntegerTextField, IntegerTextField> vectors;
-    private HashMap <IntegerTextField, IntegerTextField> memStore;
+    private HashMap <JTextField, JTextField> memStore;
     private HashMap <JTextField, JTextField> presetRegs;
     private HashMap<JTextField, IntegerTextField> mallocedChunks;
     private HashMap<JTextField, IntegerTextField> createdSymbols;
@@ -278,7 +278,7 @@ public class AngryGhidraProvider extends ComponentProvider {
         gbc_lbMallocName.gridy = 0;
         mallocPanel.add(lbMallocName, gbc_lbMallocName);
 
-        lbMallocSize = new JLabel("Size");
+        lbMallocSize = new JLabel("Size (bytes)");
         lbMallocSize.setFont(sansSerif12);
         GridBagConstraints gbc_lbMallocSize = new GridBagConstraints();
         gbc_lbMallocSize.weightx = 1.0;
@@ -881,8 +881,7 @@ public class AngryGhidraProvider extends ComponentProvider {
         gbc_lbStoreVal.gridy = 0;
         writeMemoryPanel.add(lbStoreVal, gbc_lbStoreVal);
 
-        memStoreAddrTF = new IntegerTextField();
-        memStoreAddrTF.setHexMode();
+        memStoreAddrTF = new JTextField();
         GridBagConstraints gbc_memStoreAddrTF = new GridBagConstraints();
         gbc_memStoreAddrTF.anchor = GridBagConstraints.CENTER;
         gbc_memStoreAddrTF.fill = GridBagConstraints.HORIZONTAL;
@@ -891,10 +890,9 @@ public class AngryGhidraProvider extends ComponentProvider {
         gbc_memStoreAddrTF.gridy = 1;
         gbc_memStoreAddrTF.weightx = 1;
         gbc_memStoreAddrTF.weighty = 0.1;
-        writeMemoryPanel.add(memStoreAddrTF.getComponent(), gbc_memStoreAddrTF);
+        writeMemoryPanel.add(memStoreAddrTF, gbc_memStoreAddrTF);
 
-        memStoreValueTF = new IntegerTextField();
-        memStoreValueTF.setHexMode();
+        memStoreValueTF = new JTextField();
         GridBagConstraints gbc_memStoreValueTF = new GridBagConstraints();
         gbc_memStoreValueTF.insets = new Insets(0, 0, 0, 5);
         gbc_memStoreValueTF.fill = GridBagConstraints.HORIZONTAL;
@@ -903,7 +901,7 @@ public class AngryGhidraProvider extends ComponentProvider {
         gbc_memStoreValueTF.gridy = 1;
         gbc_memStoreValueTF.weightx = 1;
         gbc_memStoreValueTF.weighty = 0.1;
-        writeMemoryPanel.add(memStoreValueTF.getComponent(), gbc_memStoreValueTF);
+        writeMemoryPanel.add(memStoreValueTF, gbc_memStoreValueTF);
 
         btnAddWM = new JButton("");
         btnAddWM.setContentAreaFilled(false);
@@ -920,8 +918,7 @@ public class AngryGhidraProvider extends ComponentProvider {
         writeMemoryPanel.add(btnAddWM, gbc_btnAddWM);
         btnAddWM.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                IntegerTextField addrTF = new IntegerTextField();
-                addrTF.setHexMode();
+                JTextField addrTF = new JTextField();
                 GridBagConstraints gbc_addrTF = new GridBagConstraints();
                 gbc_addrTF.fill = GridBagConstraints.HORIZONTAL;
                 gbc_addrTF.anchor = GridBagConstraints.CENTER;
@@ -930,10 +927,9 @@ public class AngryGhidraProvider extends ComponentProvider {
                 gbc_addrTF.gridy = guiStoreNextId;
                 gbc_addrTF.weightx = 1;
                 gbc_addrTF.weighty = 0.1;
-                writeMemoryPanel.add(addrTF.getComponent(), gbc_addrTF);
+                writeMemoryPanel.add(addrTF, gbc_addrTF);
 
-                IntegerTextField valTF = new IntegerTextField();
-                valTF.setHexMode();
+                JTextField valTF = new JTextField();
                 GridBagConstraints gbc_valTF = new GridBagConstraints();
                 gbc_valTF.fill = GridBagConstraints.HORIZONTAL;
                 gbc_valTF.anchor = GridBagConstraints.CENTER;
@@ -942,7 +938,7 @@ public class AngryGhidraProvider extends ComponentProvider {
                 gbc_valTF.gridy = guiStoreNextId;
                 gbc_valTF.weightx = 1;
                 gbc_valTF.weighty = 0.1;
-                writeMemoryPanel.add(valTF.getComponent(), gbc_valTF);
+                writeMemoryPanel.add(valTF, gbc_valTF);
                 memStore.put(addrTF, valTF);
 
                 JButton btnDel = new JButton("");
@@ -961,8 +957,8 @@ public class AngryGhidraProvider extends ComponentProvider {
                 btnDel.addActionListener(new ActionListener() {
                     public void actionPerformed(ActionEvent actionEvent) {
                         guiStoreNextId--;
-                        writeMemoryPanel.remove(addrTF.getComponent());
-                        writeMemoryPanel.remove(valTF.getComponent());
+                        writeMemoryPanel.remove(addrTF);
+                        writeMemoryPanel.remove(valTF);
                         writeMemoryPanel.remove(btnDel);
                         delStoreBtns.remove(btnDel);
                         memStore.remove(addrTF, valTF);
@@ -1297,7 +1293,7 @@ public class AngryGhidraProvider extends ComponentProvider {
                 if (!memStoreAddrTF.getText().isEmpty() && !memStoreValueTF.getText().isEmpty()) {
                     JSONObject storeDetails = new JSONObject();
                     storeDetails.put(memStoreAddrTF.getText(), memStoreValueTF.getText());
-                    for (Entry<IntegerTextField, IntegerTextField> entry : memStore.entrySet()) {
+                    for (Entry<JTextField, JTextField> entry : memStore.entrySet()) {
                         String addr = entry.getKey().getText();
                         String val = entry.getValue().getText();
                         if (!addr.isEmpty() && !val.isEmpty()) {
@@ -1423,11 +1419,11 @@ public class AngryGhidraProvider extends ComponentProvider {
 
         // Reset mem set contents
         guiStoreNextId = 2;
-        for (Entry<IntegerTextField, IntegerTextField> entry : memStore.entrySet()) {
-            IntegerTextField addrTF = entry.getKey();
-            IntegerTextField valTF = entry.getValue();
-            writeMemoryPanel.remove(addrTF.getComponent());
-            writeMemoryPanel.remove(valTF.getComponent());
+        for (Entry<JTextField, JTextField> entry : memStore.entrySet()) {
+            JTextField addrTF = entry.getKey();
+            JTextField valTF = entry.getValue();
+            writeMemoryPanel.remove(addrTF);
+            writeMemoryPanel.remove(valTF);
         }
         for (JButton button : delStoreBtns) {
             writeMemoryPanel.remove(button);
@@ -1498,15 +1494,15 @@ public class AngryGhidraProvider extends ComponentProvider {
         guiStoreNextId = value;
     }
 
-    public IntegerTextField getStoreAddressTF() {
+    public JTextField getStoreAddressTF() {
         return memStoreAddrTF;
     }
 
-    public IntegerTextField getStoreValueTF() {
+    public JTextField getStoreValueTF() {
         return memStoreValueTF;
     }
 
-    public void putIntoMemStore(IntegerTextField tf1, IntegerTextField tf2) {
+    public void putIntoMemStore(JTextField tf1, JTextField tf2) {
         memStore.put(tf1, tf2);
     }
 

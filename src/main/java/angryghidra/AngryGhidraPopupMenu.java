@@ -40,8 +40,6 @@ public class AngryGhidraPopupMenu extends ListingContextAction {
     private JCheckBox blankStateCB;
     private JCheckBox avoidAddrsCB;
     private JPanel writeMemoryPanel;
-    private IntegerTextField storeAddressTF;
-    private IntegerTextField storeValueTF;
 
     public AngryGhidraPopupMenu(AngryGhidraPlugin plugin) {
         super("AngryGhidraPlugin", plugin.getName());
@@ -220,6 +218,7 @@ public class AngryGhidraPopupMenu extends ListingContextAction {
         tool.addAction(resetAvoidAddr);
          */
 
+        /*
         ListingContextAction applyPatchedBytes = new ListingContextAction("Apply patched bytes", getName()) {
             @Override
             protected void actionPerformed(ListingActionContext context) {
@@ -307,6 +306,7 @@ public class AngryGhidraPopupMenu extends ListingContextAction {
             menuName,
             "Apply Patched Bytes"}, null, groupName));
         tool.addAction(applyPatchedBytes);
+         */
     }
 
     private void setupComponents() {
@@ -315,7 +315,5 @@ public class AngryGhidraPopupMenu extends ListingContextAction {
         textArea = provider.getTextArea();
         avoidAddrsCB = provider.getCBAvoidAddresses();
         writeMemoryPanel = provider.getWriteMemoryPanel();
-        storeAddressTF = provider.getStoreAddressTF();
-        storeValueTF = provider.getStoreValueTF();
     }
 }
